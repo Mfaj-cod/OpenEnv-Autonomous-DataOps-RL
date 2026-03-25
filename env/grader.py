@@ -2,9 +2,7 @@ import pandas as pd
 import numpy as np
 
 
-# =========================
 # DATA QUALITY METRIC
-# =========================
 def compute_data_quality(data):
     if not data:
         return 0.0
@@ -69,9 +67,7 @@ def compute_data_quality(data):
     return max(0.0, min(score, 1.0))
 
 
-# =========================
 # FINAL GRADER
-# =========================
 def grade(env_state):
     data = env_state.get("data", [])
 

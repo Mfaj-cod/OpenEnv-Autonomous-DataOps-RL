@@ -7,7 +7,6 @@ API_URL = "http://127.0.0.1:8000"
 
 st.set_page_config(page_title="DataOps RL UI", layout="wide")
 
-# GLOBAL CSS FIX
 st.markdown("""
 <style>
 
@@ -56,7 +55,7 @@ header[data-testid="stHeader"] {
 </style>
 """, unsafe_allow_html=True)
 
-# REAL TITLE (NOT FAKE HEADER)
+# TITLE
 st.title("🚀 DataOps RL Command Center")
 
 # SESSION STATE
@@ -152,7 +151,7 @@ if "obs" in st.session_state:
 
     tabs = st.tabs(["📊 Data", "⚠️ Errors", "📈 Metrics", "📜 Logs"])
 
-    # -------- DATA TAB --------
+    # DATA TAB
     with tabs[0]:
         col1, col2 = st.columns(2)
 
@@ -165,7 +164,7 @@ if "obs" in st.session_state:
             st.subheader("Schema")
             st.json(obs["data_schema"])
 
-    # -------- ERRORS TAB --------
+    # ERRORS TAB
     with tabs[1]:
         st.subheader("Detected Issues")
         if obs["visible_errors"]:
@@ -174,7 +173,7 @@ if "obs" in st.session_state:
         else:
             st.success("No errors detected")
 
-    # -------- METRICS TAB --------
+    # METRICS TAB
     with tabs[2]:
         col3, col4 = st.columns(2)
 
@@ -188,7 +187,7 @@ if "obs" in st.session_state:
             st.metric("Step Count", obs["step_count"])
             st.markdown('</div>', unsafe_allow_html=True)
 
-    # -------- LOGS TAB --------
+    # LOGS TAB
     with tabs[3]:
         if st.session_state.logs:
             log_df = pd.DataFrame(st.session_state.logs)

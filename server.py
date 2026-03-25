@@ -5,7 +5,7 @@ from env.environment import DataOpsEnv
 from env.models import Action
 from env.tasks import list_tasks
 from env.grader import grade
-from baseline import run_baseline
+from env.baseline import run_baseline
 
 
 app = FastAPI(title="DataOps RL Environment API")

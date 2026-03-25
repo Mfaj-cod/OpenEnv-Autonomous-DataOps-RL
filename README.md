@@ -72,9 +72,9 @@ Interactive UI for:
 │ ├── grader.py # Data quality and scoring logic
 │ ├── models.py # Pydantic schemas
 │ ├── tasks.py # Task definitions
+│ ├── baseline.py # Baseline intelligent agent
 │
 ├── server.py # FastAPI server
-├── baseline.py # Baseline intelligent agent
 ├── app.py # Streamlit UI
 ├── openenv.yaml # Environment configuration
 ├── testing_sample.csv # Example dataset
