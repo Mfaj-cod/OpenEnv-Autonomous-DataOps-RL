@@ -9,16 +9,12 @@ description: >
 
 entrypoint: env.environment:DataOpsEnv
 
-# ======================
 # SCHEMAS
-# ======================
 observation_schema: env.models:Observation
 action_schema: env.models:Action
 reward_schema: env.models:Reward
 
-# ======================
 # ACTION SPACE
-# ======================
 actions:
   - fill_missing
   - convert_type
@@ -31,9 +27,7 @@ tools:
   - view_logs
   - query_sql
 
-# ======================
 # REWARD DESIGN
-# ======================
 reward:
   type: dense
   components:
@@ -54,9 +48,7 @@ reward:
       - premature_pipeline_execution
       - unnecessary_tool_calls
 
-# ======================
 # TERMINATION CONDITIONS
-# ======================
 termination:
   success:
     min_quality_score: 0.95
@@ -65,9 +57,7 @@ termination:
   failure:
     max_steps: 15
 
-# ======================
 # TASK DEFINITIONS
-# ======================
 tasks:
 
   - id: missing_values_easy
@@ -100,9 +90,7 @@ tasks:
       - apply multiple transformations
       - execute pipeline successfully
 
-# ======================
 # API ENDPOINTS
-# ======================
 endpoints:
   reset: /reset
   step: /step
@@ -110,18 +98,14 @@ endpoints:
   tasks: /tasks
   baseline: /baseline
 
-# ======================
 # ENVIRONMENT LIMITS
-# ======================
 constraints:
   max_steps: 15
   max_file_size_mb: 200
   supported_formats:
     - csv
 
-# ======================
 # METRICS
-# ======================
 metrics:
   primary: data_quality_score
   secondary:
@@ -129,9 +113,7 @@ metrics:
     - steps_used
     - hidden_issues_resolved
 
-# ======================
 # METADATA
-# ======================
 metadata:
   author: "Core Tech Team"
   license: "MIT"
