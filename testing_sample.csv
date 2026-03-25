@@ -1,0 +1,101 @@
+id,name,age,salary,department,join_date
+1,Jacqueline Miles,18,,,
+2,Tracy Jackson,unknown,116884.0,Sales,1979-02-03
+3,Stephanie Perry,26,NaN,HR,invalid_date
+4,Theresa Evans,unknown,,Sales,invalid_date
+5,Michael Richardson,36,99950.87,Engineering,1976-08-20
+6,,,NaN,Sales,1992-01-06
+7,Makayla Payne,unknown,NaN,Sales,invalid_date
+8,Scott James,unknown,NaN,HR,
+9,Jaclyn Thornton,,,Sales,invalid_date
+10,Vanessa Hanson,unknown,70378.21,,invalid_date
+11,Morgan Brown,24,70306.09,Sales,2003-11-15
+12,Mark Smith,28,,,
+13,Barbara Compton,,,,1990-07-20
+14,James Hall,,43751.58,Sales,2004-11-18
+15,Melanie Martin,,77249.21,HR,
+16,,52,NaN,,
+17,Rachel Dunn,,85998.61,Engineering,
+18,Tyler Davis,,NaN,HR,
+19,Jessica Kent,unknown,NaN,Sales,2002-10-16
+20,Lisa Sanders,59,NaN,Engineering,invalid_date
+21,Stephanie Walker,unknown,NaN,Sales,invalid_date
+22,Leah Fleming,46,,HR,1988-09-29
+23,Denise Clark,unknown,NaN,Sales,invalid_date
+24,Andre Vasquez,43,,,invalid_date
+25,Adriana Black,unknown,,Engineering,invalid_date
+26,Shaun Davis,,NaN,Sales,invalid_date
+27,Mrs. Katelyn Robertson MD,,57567.08,HR,
+28,Tracey Nichols,unknown,NaN,,2009-07-26
+29,Meghan Martinez,47,,,invalid_date
+30,Mr. Danny Williams,,NaN,,
+31,Jacob Lopez,46,,Sales,1970-08-30
+32,Wendy Padilla,33,33778.31,Sales,
+33,Matthew Harper,unknown,,Engineering,2018-08-08
+34,,,103017.96,Engineering,invalid_date
+35,Mr. Brian Lynch,unknown,,Engineering,2005-06-11
+36,Jennifer Schmidt,22,NaN,Engineering,1998-02-18
+37,Robert Griffith,,56631.31,,invalid_date
+38,,56,NaN,Engineering,1978-07-16
+39,Zachary Cannon,,NaN,HR,
+40,Brian Norman,,104299.2,Engineering,1996-06-16
+41,Jason Newton,,NaN,Sales,invalid_date
+42,Brandon Lopez,41,NaN,Engineering,1992-06-28
+43,Steven Morse,59,,HR,invalid_date
+44,Alex Carpenter,,,,2013-05-29
+45,Jason Brown,54,,Engineering,
+46,Jason Benjamin,,NaN,,1998-10-20
+47,Cassie Rhodes,26,99338.19,Sales,2011-12-23
+48,,,NaN,Engineering,
+49,Angela Martinez,unknown,,Sales,
+50,Samantha Castillo,18,NaN,Engineering,2014-05-05
+51,Alexis Johnson DDS,22,NaN,HR,2008-12-02
+52,Kevin Marshall,,NaN,,1995-10-17
+53,Robert Patel,unknown,39356.77,,invalid_date
+54,Juan Campbell,30,108749.16,Sales,
+55,Jennifer Salazar,unknown,NaN,HR,
+56,Peter Kelly,35,NaN,,
+57,Adam Dawson,unknown,NaN,Engineering,1989-03-09
+58,,unknown,93839.5,Sales,invalid_date
+59,,unknown,88224.54,Engineering,1999-08-26
+60,Christopher Larson,,,Engineering,invalid_date
+61,Audrey Ellis,,,,
+62,Dean Boyd,31,NaN,,2015-03-07
+63,Jamie Miller,,,Sales,invalid_date
+64,Daniel Hernandez,unknown,,Engineering,2024-09-17
+65,Crystal Moran,unknown,NaN,,
+66,Dr. Stephen Coleman,unknown,NaN,,
+67,Jennifer Haney,30,,HR,1974-09-26
+68,Jonathan Watkins,54,92889.39,HR,invalid_date
+69,,unknown,118544.33,HR,
+70,David Roman,38,,,1973-09-07
+71,John Stewart,unknown,NaN,Sales,1972-12-25
+72,Steven Rowe,unknown,,Sales,invalid_date
+73,Bradley Velez,unknown,54084.1,Engineering,2008-09-02
+74,Daniel Ray,49,64041.63,,2011-08-20
+75,Shawn Lee,51,,Sales,2004-09-12
+76,Cassandra House,unknown,NaN,HR,
+77,Kenneth Schultz,35,66465.98,Engineering,2014-11-04
+78,Antonio Mckenzie,unknown,,,
+79,Sara Parker,50,,Sales,
+80,Anthony Yu,,,HR,2005-09-17
+81,Gerald Ferguson,,106005.18,Sales,2023-05-15
+82,Scott Green,,56180.19,,1972-10-14
+83,Jacob Wang,,99880.37,HR,1970-05-28
+84,Nathan Cook,unknown,95118.2,Engineering,
+85,Melissa Ramos,unknown,,HR,2007-04-23
+86,Andrew Maldonado,unknown,81164.43,,
+87,Rebecca Melton,,NaN,Engineering,
+88,Allen Dunlap,,,Sales,
+89,William Reed,36,84910.07,Engineering,
+90,Kristin Hamilton,,101827.61,Sales,
+91,Jason King,,,HR,invalid_date
+92,Karen Mcmillan,unknown,111723.17,Engineering,
+93,Desiree Dean,,67683.9,Engineering,invalid_date
+94,Kristy Patel,unknown,118920.0,HR,invalid_date
+95,Ruth Nelson,unknown,103727.59,Engineering,1988-04-14
+96,Caroline Patterson,unknown,,Engineering,invalid_date
+97,Cody Mcdonald,,61890.25,Engineering,invalid_date
+98,Rachel Crawford,36,47093.53,HR,2013-07-19
+99,Travis Carpenter,68,,HR,invalid_date
+100,Craig Short,unknown,47843.82,,2009-01-28

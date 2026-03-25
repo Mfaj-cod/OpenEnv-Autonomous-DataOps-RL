@@ -1,0 +1,143 @@
+name: dataops_rl_env
+version: "1.1.0"
+
+description: >
+  A reinforcement learning environment for autonomous DataOps agents.
+  Agents interact with tabular datasets to detect, diagnose, and resolve
+  data quality issues including missing values, schema inconsistencies,
+  duplicates, and pipeline failures.
+
+entrypoint: env.environment:DataOpsEnv
+
+# ======================
+# SCHEMAS
+# ======================
+observation_schema: env.models:Observation
+action_schema: env.models:Action
+reward_schema: env.models:Reward
+
+# ======================
+# ACTION SPACE
+# ======================
+actions:
+  - fill_missing
+  - convert_type
+  - remove_duplicates
+  - run_pipeline
+  - use_tool
+
+tools:
+  - profile_data
+  - view_logs
+  - query_sql
+
+# ======================
+# REWARD DESIGN
+# ======================
+reward:
+  type: dense
+  components:
+    - data_quality_delta
+    - schema_validity
+    - pipeline_success
+    - hidden_issue_resolution
+    - efficiency_penalty
+    - action_cost
+
+  shaping:
+    positive:
+      - successful_data_cleaning
+      - useful_tool_usage
+      - pipeline_completion
+    negative:
+      - redundant_actions
+      - premature_pipeline_execution
+      - unnecessary_tool_calls
+
+# ======================
+# TERMINATION CONDITIONS
+# ======================
+termination:
+  success:
+    min_quality_score: 0.95
+    all_hidden_resolved: true
+
+  failure:
+    max_steps: 15
+
+# ======================
+# TASK DEFINITIONS
+# ======================
+tasks:
+
+  - id: missing_values_easy
+    description: >
+      Dataset contains missing values across multiple columns.
+      Agent must impute or handle null values to improve completeness.
+    difficulty: easy
+    expected_behaviour:
+      - use profiling tool
+      - apply fill_missing
+      - validate improvement
+
+  - id: schema_fix_medium
+    description: >
+      Dataset contains type inconsistencies (e.g., numeric stored as strings).
+      Agent must convert types and ensure schema validity.
+    difficulty: medium
+    expected_behaviour:
+      - detect type issues
+      - apply convert_type
+      - validate schema
+
+  - id: pipeline_debug_hard
+    description: >
+      Dataset contains multiple issues including missing values,
+      duplicates, and schema mismatches. Full pipeline must be debugged.
+    difficulty: hard
+    expected_behaviour:
+      - explore using tools
+      - apply multiple transformations
+      - execute pipeline successfully
+
+# ======================
+# API ENDPOINTS
+# ======================
+endpoints:
+  reset: /reset
+  step: /step
+  grader: /grader
+  tasks: /tasks
+  baseline: /baseline
+
+# ======================
+# ENVIRONMENT LIMITS
+# ======================
+constraints:
+  max_steps: 15
+  max_file_size_mb: 200
+  supported_formats:
+    - csv
+
+# ======================
+# METRICS
+# ======================
+metrics:
+  primary: data_quality_score
+  secondary:
+    - efficiency
+    - steps_used
+    - hidden_issues_resolved
+
+# ======================
+# METADATA
+# ======================
+metadata:
+  author: "Core Tech Team"
+  license: "MIT"
+  tags:
+    - reinforcement-learning
+    - dataops
+    - autonomous-agents
+    - data-quality
+    - debugging
