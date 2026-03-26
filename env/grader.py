@@ -1,103 +1,186 @@
-import pandas as pd
+from typing import Any, Dict, Optional
+
 import numpy as np
+import pandas as pd
+
+from env.tasks import DEFAULT_MAX_STEPS, get_task_data
+
+TASK_GRADER_WEIGHTS: Dict[str, Dict[str, float]] = {
+    "missing_values_easy": {
+        "completeness": 0.35,
+        "data_quality": 0.25,
+        "pipeline_success": 0.15,
+        "hidden_resolution": 0.10,
+        "efficiency": 0.15,
+    },
+    "schema_fix_medium": {
+        "schema_alignment": 0.30,
+        "data_quality": 0.20,
+        "pipeline_success": 0.20,
+        "hidden_resolution": 0.15,
+        "completeness": 0.10,
+        "efficiency": 0.05,
+    },
+    "pipeline_debug_hard": {
+        "data_quality": 0.25,
+        "schema_alignment": 0.20,
+        "uniqueness": 0.10,
+        "pipeline_success": 0.20,
+        "hidden_resolution": 0.15,
+        "efficiency": 0.10,
+    },
+}
 
 
-# DATA QUALITY METRIC
-def compute_data_quality(data):
-    if not data:
+def _clamp(score: float) -> float:
+    return float(max(0.0, min(score, 1.0)))
+
+
+def _compute_schema_alignment(
+    df: pd.DataFrame,
+    expected_schema: Optional[Dict[str, str]] = None,
+) -> float:
+    if df.empty:
         return 0.0
+
+    if not expected_schema:
+        return 1.0
+
+    column_scores = []
+
+    for column, expected_type in expected_schema.items():
+        if column not in df.columns:
+            column_scores.append(0.0)
+            continue
+
+        series = df[column]
+        string_values = series.astype(str).str.strip()
+        non_empty = series[~series.isnull() & (string_values != "")]
+
+        if non_empty.empty:
+            column_scores.append(1.0)
+            continue
+
+        normalized_expected_type = expected_type.lower()
+        if normalized_expected_type in {"int", "float", "number"}:
+            numeric = pd.to_numeric(non_empty, errors="coerce")
+            column_scores.append(float(numeric.notnull().mean()))
+        else:
+            column_scores.append(1.0)
+
+    if not column_scores:
+        return 1.0
+
+    return _clamp(float(np.mean(column_scores)))
+
+
+def compute_quality_signals(
+    data: Any,
+    expected_schema: Optional[Dict[str, str]] = None,
+) -> Dict[str, float]:
+    if not data:
+        return {
+            "data_quality": 0.0,
+            "completeness": 0.0,
+            "uniqueness": 0.0,
+            "schema_alignment": 0.0,
+            "type_consistency": 0.0,
+        }
 
     df = pd.DataFrame(data)
-
-    # safety guard
     if df.empty or df.size == 0:
-        return 0.0
+        return {
+            "data_quality": 0.0,
+            "completeness": 0.0,
+            "uniqueness": 0.0,
+            "schema_alignment": 0.0,
+            "type_consistency": 0.0,
+        }
 
-    total_cells = df.size
+    total_cells = max(int(df.size), 1)
+    missing_mask = df.isnull() | (df.astype(str).apply(lambda col: col.str.strip()) == "")
+    missing_ratio = float(missing_mask.sum().sum()) / total_cells
+    completeness = _clamp(1.0 - missing_ratio)
 
-    # -------- 1. COMPLETENESS --------
-    missing_mask = df.isnull() | (df.astype(str).apply(lambda x: x.str.strip()) == "")
-    missing_ratio = missing_mask.sum().sum() / total_cells
+    duplicate_ratio = float(df.duplicated().sum()) / max(1, len(df))
+    uniqueness = _clamp(1.0 - duplicate_ratio)
 
-    # -------- 2. UNIQUENESS --------
-    duplicate_ratio = df.duplicated().sum() / max(1, len(df))
+    schema_alignment = _compute_schema_alignment(df, expected_schema)
+    type_consistency = schema_alignment if expected_schema else uniqueness
 
-    # -------- 3. TYPE CONSISTENCY --------
-    type_penalty = 0
+    data_quality = _clamp(
+        (0.45 * completeness) + (0.25 * uniqueness) + (0.30 * type_consistency)
+    )
 
-    for col in df.columns:
-        if df[col].dtype == "object":
-            non_null = df[col].dropna()
-
-            if len(non_null) == 0:
-                continue
-
-            numeric_like = pd.to_numeric(non_null, errors="coerce")
-            valid_ratio = numeric_like.notnull().mean()
-
-            # if mostly numeric but stored as object → bad
-            if valid_ratio > 0.7:
-                type_penalty += 1
-
-    type_penalty = type_penalty / len(df.columns)
-
-    # -------- 4. VALIDITY (basic numeric sanity) --------
-    validity_penalty = 0
-
-    for col in df.columns:
-        if df[col].dtype != "object":
-            if df[col].isnull().all():
-                continue
-
-            # detect extreme anomalies (very rough)
-            try:
-                std = df[col].std()
-                if std == 0 or np.isnan(std):
-                    continue
-            except:
-                continue
-
-    # -------- FINAL SCORE --------
-    score = 1.0
-
-    score -= 0.4 * missing_ratio
-    score -= 0.3 * duplicate_ratio
-    score -= 0.3 * type_penalty
-
-    return max(0.0, min(score, 1.0))
+    return {
+        "data_quality": data_quality,
+        "completeness": completeness,
+        "uniqueness": uniqueness,
+        "schema_alignment": schema_alignment,
+        "type_consistency": _clamp(type_consistency),
+    }
 
 
-# FINAL GRADER
-def grade(env_state):
-    data = env_state.get("data", [])
+def compute_data_quality(
+    data: Any,
+    expected_schema: Optional[Dict[str, str]] = None,
+) -> float:
+    return compute_quality_signals(data, expected_schema)["data_quality"]
 
-    quality = compute_data_quality(data)
 
-    schema_valid = env_state.get("schema_valid", 0)
-    pipeline_success = env_state.get("pipeline_success", 0)
-    hidden_resolved = env_state.get("hidden_resolved", 0)
-    steps = env_state.get("step_count", 1)
+def grade_report(env_state: Dict[str, Any], task_id: Optional[str] = None) -> Dict[str, Any]:
+    resolved_task_id = task_id or env_state.get("task_id") or "missing_values_easy"
 
-    # -------- NORMALIZATION --------
-    hidden_score = min(hidden_resolved / 3, 1.0)
+    task_schema: Dict[str, str] = {}
+    task_hidden_count = 0
+    try:
+        task_config = get_task_data(resolved_task_id)
+        task_schema = task_config.get("schema", {})
+        task_hidden_count = len(task_config.get("hidden_errors", []))
+    except ValueError:
+        pass
 
-    # stronger efficiency pressure
-    efficiency = max(0.0, 1 - steps / 12)
+    expected_schema = env_state.get("expected_schema") or task_schema
+    signals = compute_quality_signals(env_state.get("data", []), expected_schema)
 
-    # -------- FINAL SCORE --------
+    total_hidden = int(env_state.get("total_hidden", task_hidden_count))
+    hidden_resolved = int(env_state.get("hidden_resolved", 0))
+    if total_hidden <= 0:
+        hidden_resolution = 1.0
+    else:
+        hidden_resolution = _clamp(hidden_resolved / float(total_hidden))
+
+    max_steps = int(env_state.get("max_steps", DEFAULT_MAX_STEPS))
+    steps = int(env_state.get("step_count", 0))
+    efficiency = _clamp(1.0 - (steps / float(max(1, max_steps))))
+
+    components = {
+        "data_quality": signals["data_quality"],
+        "completeness": signals["completeness"],
+        "uniqueness": signals["uniqueness"],
+        "schema_alignment": signals["schema_alignment"],
+        "type_consistency": signals["type_consistency"],
+        "pipeline_success": float(bool(env_state.get("pipeline_success", 0))),
+        "hidden_resolution": hidden_resolution,
+        "efficiency": efficiency,
+    }
+
+    weights = TASK_GRADER_WEIGHTS.get(
+        resolved_task_id,
+        TASK_GRADER_WEIGHTS["pipeline_debug_hard"],
+    )
+
     score = 0.0
+    for component, weight in weights.items():
+        score += weight * components.get(component, 0.0)
 
-    # core signal (most important)
-    score += 0.4 * quality
+    return {
+        "task_id": resolved_task_id,
+        "score": _clamp(score),
+        "components": {name: _clamp(value) for name, value in components.items()},
+        "weights": weights,
+    }
 
-    # correctness
-    score += 0.2 * schema_valid
-    score += 0.2 * pipeline_success
 
-    # debugging behavior
-    score += 0.1 * hidden_score
-
-    # efficiency
-    score += 0.1 * efficiency
-
-    return max(0.0, min(score, 1.0))
+def grade(env_state: Dict[str, Any], task_id: Optional[str] = None) -> float:
+    return grade_report(env_state, task_id=task_id)["score"]

@@ -1,21 +1,18 @@
 name: dataops_rl_env
-version: "1.1.0"
+version: "1.2.0"
 
 description: >
-  A reinforcement learning environment for autonomous DataOps agents.
-  Agents interact with tabular datasets to detect, diagnose, and resolve
-  data quality issues including missing values, schema inconsistencies,
-  duplicates, and pipeline failures.
+  A real-world DataOps environment for training and evaluating autonomous agents
+  on tabular data cleaning and pipeline debugging tasks.
 
 entrypoint: env.environment:DataOpsEnv
 
-# SCHEMAS
 observation_schema: env.models:Observation
 action_schema: env.models:Action
 reward_schema: env.models:Reward
 
-# ACTION SPACE
 actions:
+  - inspect_column
   - fill_missing
   - convert_type
   - remove_duplicates
@@ -27,99 +24,91 @@ tools:
   - view_logs
   - query_sql
 
-# REWARD DESIGN
 reward:
   type: dense
   components:
-    - data_quality_delta
-    - schema_validity
-    - pipeline_success
-    - hidden_issue_resolution
-    - efficiency_penalty
+    - score_delta
+    - quality_delta
+    - hidden_progress
+    - pipeline_bonus
+    - tool_bonus
+    - repeat_penalty
+    - no_op_penalty
     - action_cost
-
   shaping:
     positive:
-      - successful_data_cleaning
-      - useful_tool_usage
-      - pipeline_completion
+      - partial quality improvement
+      - hidden issue resolution
+      - successful pipeline execution
     negative:
-      - redundant_actions
-      - premature_pipeline_execution
-      - unnecessary_tool_calls
+      - repeated unproductive actions
+      - premature pipeline execution
+      - action overhead and no-op behavior
 
-# TERMINATION CONDITIONS
 termination:
   success:
-    min_quality_score: 0.95
+    min_grader_score:
+      missing_values_easy: 0.95
+      schema_fix_medium: 0.93
+      pipeline_debug_hard: 0.90
+
     all_hidden_resolved: true
+    pipeline_success: true
 
   failure:
-    max_steps: 15
+    max_steps:
+      missing_values_easy: 12
+      schema_fix_medium: 15
+      pipeline_debug_hard: 15
 
-# TASK DEFINITIONS
 tasks:
-
   - id: missing_values_easy
-    description: >
-      Dataset contains missing values across multiple columns.
-      Agent must impute or handle null values to improve completeness.
     difficulty: easy
-    expected_behaviour:
-      - use profiling tool
-      - apply fill_missing
-      - validate improvement
+    description: Resolve missing values and run a clean pipeline pass.
+    objective: Impute missing values and reach high completeness quickly.
+    max_steps: 12
 
   - id: schema_fix_medium
-    description: >
-      Dataset contains type inconsistencies (e.g., numeric stored as strings).
-      Agent must convert types and ensure schema validity.
     difficulty: medium
-    expected_behaviour:
-      - detect type issues
-      - apply convert_type
-      - validate schema
-
+    description: Repair invalid numeric fields and restore schema compliance.
+    objective: Convert malformed numeric columns and clear missing values.
+    max_steps: 15
+    
   - id: pipeline_debug_hard
-    description: >
-      Dataset contains multiple issues including missing values,
-      duplicates, and schema mismatches. Full pipeline must be debugged.
     difficulty: hard
-    expected_behaviour:
-      - explore using tools
-      - apply multiple transformations
-      - execute pipeline successfully
+    description: Debug a broken pipeline with duplicates, nulls, and type failures.
+    objective: Apply multi-step cleanup and finish with a successful pipeline run.
+    max_steps: 15
 
-# API ENDPOINTS
 endpoints:
   reset: /reset
   step: /step
+  state: /state
   grader: /grader
   tasks: /tasks
   baseline: /baseline
 
-# ENVIRONMENT LIMITS
 constraints:
   max_steps: 15
   max_file_size_mb: 200
   supported_formats:
     - csv
 
-# METRICS
 metrics:
-  primary: data_quality_score
+  primary: grader_score
   secondary:
+    - data_quality
+    - hidden_resolution
     - efficiency
-    - steps_used
-    - hidden_issues_resolved
+    - pipeline_success
 
-# METADATA
 metadata:
   author: "Core Tech Team"
   license: "MIT"
   tags:
+    - openenv
     - reinforcement-learning
     - dataops
     - autonomous-agents
-    - data-quality
-    - debugging
+    - data-cleaning
+    - pipeline-debugging

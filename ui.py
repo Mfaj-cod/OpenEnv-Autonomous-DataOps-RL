@@ -10,7 +10,7 @@ st.set_page_config(page_title="DataOps RL UI", layout="wide")
 st.markdown("""
 <style>
 
-/* ===== REMOVE STREAMLIT GRADIENT NAVBAR ===== */
+/* REMOVE STREAMLIT GRADIENT NAVBAR */
 header[data-testid="stHeader"] {
     background: #000000 !important;
     border-bottom: 1px solid #222;

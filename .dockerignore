@@ -23,3 +23,5 @@ conda-meta/
 
 *.env
 .env.*
+
+*.csv
