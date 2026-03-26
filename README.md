@@ -1,5 +1,10 @@
 ---
 title: DataOps RL Environment
+emoji: "\U0001F9F9"
+colorFrom: blue
+colorTo: green
+sdk: docker
+app_port: 8000
 tags:
   - openenv
   - reinforcement-learning
