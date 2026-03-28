@@ -125,7 +125,7 @@ If API key/model call is unavailable, baseline automatically falls back to a det
 
 Generated with:
 ```bash
-python -c "from env.baseline import run_baseline; print(run_baseline(force_policy='fallback'))"
+python inference.py --force-fallback
 ```
 
 Current scores:
