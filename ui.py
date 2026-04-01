@@ -1,203 +1,249 @@
-import streamlit as st
-import requests
-import pandas as pd
+import os
+import tempfile
 import time
 
-API_URL = "http://127.0.0.1:8000"
+import pandas as pd
+import requests
+import streamlit as st
+
+DEFAULT_API_URL = os.getenv("API_URL", "http://127.0.0.1:8000")
+TASK_OPTIONS = [
+    "missing_values_easy",
+    "schema_fix_medium",
+    "pipeline_debug_hard",
+]
+ACTION_OPTIONS = [
+    "inspect_column",
+    "fill_missing",
+    "convert_type",
+    "remove_duplicates",
+    "run_pipeline",
+    "use_tool",
+]
+TOOL_OPTIONS = ["profile_data", "view_logs", "query_sql"]
 
 st.set_page_config(page_title="DataOps RL UI", layout="wide")
 
-st.markdown("""
+st.markdown(
+    """
 <style>
-
-/* REMOVE STREAMLIT GRADIENT NAVBAR */
 header[data-testid="stHeader"] {
-    background: #000000 !important;
-    border-bottom: 1px solid #222;
+    background: #08121f !important;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
 }
 
-/* Fix toolbar (Deploy button area) */
 [data-testid="stToolbar"] {
-    background: #000000 !important;
+    background: #08121f !important;
 }
 
-/* Fix overlap issue */
 .block-container {
     padding-top: 2rem;
 }
 
-/* FULL BLACK BACKGROUND */
 .stApp {
-    background: #000000 !important;
-    color: #ffffff;
+    background:
+        radial-gradient(circle at top left, rgba(35, 115, 202, 0.24), transparent 35%),
+        radial-gradient(circle at top right, rgba(28, 184, 125, 0.20), transparent 30%),
+        linear-gradient(180deg, #08121f 0%, #050913 100%) !important;
+    color: #f5f7fb;
 }
 
 [data-testid="stSidebar"] {
-    background: #000000 !important;
+    background: rgba(5, 9, 19, 0.94) !important;
 }
 
-/* Buttons */
 .stButton button {
-    background: linear-gradient(90deg, #6366f1, #22c55e);
+    background: linear-gradient(90deg, #2373ca, #1cb87d);
+    border: none;
     border-radius: 12px;
     color: white;
-    font-weight: bold;
+    font-weight: 700;
 }
 
-/* Cards */
 .metric-card {
-    background: rgba(255,255,255,0.03);
+    background: rgba(255,255,255,0.04);
     border: 1px solid rgba(255,255,255,0.08);
-    padding: 10px;
-    border-radius: 12px;
+    padding: 12px;
+    border-radius: 14px;
 }
-
 </style>
-""", unsafe_allow_html=True)
+""",
+    unsafe_allow_html=True,
+)
 
-# TITLE
-st.title("🚀 DataOps RL Command Center")
 
-# SESSION STATE
+def _api_request(method: str, url: str, **kwargs):
+    try:
+        response = requests.request(method=method, url=url, timeout=45, **kwargs)
+        response.raise_for_status()
+        return response.json(), None
+    except requests.RequestException as exc:
+        return None, str(exc)
+
+
+def _save_uploaded_csv(uploaded_file):
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".csv") as temp_file:
+        temp_file.write(uploaded_file.getbuffer())
+        return temp_file.name
+
+
 if "logs" not in st.session_state:
     st.session_state.logs = []
+if "obs" not in st.session_state:
+    st.session_state.obs = None
+if "upload_path" not in st.session_state:
+    st.session_state.upload_path = None
+if "baseline_result" not in st.session_state:
+    st.session_state.baseline_result = None
+if "grader_result" not in st.session_state:
+    st.session_state.grader_result = None
 
-# SIDEBAR
-st.sidebar.header("⚙️ Control Panel")
+st.title("DataOps RL Command Center")
+st.caption("Manual frontend for the current OpenEnv API. The submission script lives in inference.py.")
 
-task = st.sidebar.selectbox(
-    "Task",
-    ["missing_values_easy", "schema_fix_medium", "pipeline_debug_hard"]
-)
-
+st.sidebar.header("Control Panel")
+api_url = st.sidebar.text_input("API URL", value=DEFAULT_API_URL).rstrip("/")
+task = st.sidebar.selectbox("Task", TASK_OPTIONS)
 uploaded_file = st.sidebar.file_uploader("Upload CSV", type=["csv"])
 
-# RESET
-if st.sidebar.button("🔄 Reset Environment"):
+if st.sidebar.button("Reset Environment"):
     with st.spinner("Resetting environment..."):
-        time.sleep(0.8)
-
-        if uploaded_file:
-            with open("temp.csv", "wb") as f:
-                f.write(uploaded_file.getbuffer())
-            response = requests.post(f"{API_URL}/reset?task_id={task}&data_path=testing_sample.csv")
+        time.sleep(0.2)
+        if uploaded_file is not None:
+            st.session_state.upload_path = _save_uploaded_csv(uploaded_file)
+            payload_url = f"{api_url}/reset?task_id={task}&data_path={st.session_state.upload_path}"
         else:
-            response = requests.post(f"{API_URL}/reset?task_id={task}")
+            st.session_state.upload_path = None
+            payload_url = f"{api_url}/reset?task_id={task}"
 
-    if response.status_code == 200:
-        st.session_state.obs = response.json()["observation"]
-        st.session_state.logs = []
-        st.success("Environment Ready")
-        # st.balloons()
+        data, error = _api_request("POST", payload_url)
+
+    if error:
+        st.error(error)
     else:
-        st.error(response.text)
+        st.session_state.obs = data["observation"]
+        st.session_state.logs = []
+        st.session_state.grader_result = None
+        st.success("Environment ready")
 
-# ACTIONS
-st.sidebar.subheader("🎮 Actions")
+st.sidebar.subheader("Actions")
+action_type = st.sidebar.selectbox("Action", ACTION_OPTIONS)
 
-action_type = st.sidebar.selectbox(
-    "Action",
-    ["fill_missing", "convert_type", "remove_duplicates", "run_pipeline", "use_tool"]
-)
+current_columns = []
+if st.session_state.obs:
+    current_columns = list(st.session_state.obs.get("data_schema", {}).keys())
+
+column_name = None
+if action_type == "inspect_column":
+    if current_columns:
+        column_name = st.sidebar.selectbox("Column", current_columns)
+    else:
+        column_name = st.sidebar.text_input("Column", value="")
 
 tool_name = None
 if action_type == "use_tool":
-    tool_name = st.sidebar.selectbox(
-        "Tool",
-        ["profile_data", "view_logs", "query_sql"]
-    )
+    tool_name = st.sidebar.selectbox("Tool", TOOL_OPTIONS)
 
-if st.sidebar.button("▶ Execute Step"):
+if st.sidebar.button("Execute Step"):
     payload = {"action_type": action_type}
     if tool_name:
         payload["tool_name"] = tool_name
+    if column_name:
+        payload["column"] = column_name
 
     progress = st.sidebar.progress(0)
     for i in range(100):
-        time.sleep(0.01)
+        time.sleep(0.003)
         progress.progress(i + 1)
 
-    response = requests.post(f"{API_URL}/step", json=payload)
+    data, error = _api_request("POST", f"{api_url}/step", json=payload)
 
-    if response.status_code == 200:
-        data = response.json()
+    if error:
+        st.error(error)
+    else:
         st.session_state.obs = data["observation"]
+        st.session_state.logs.append(
+            {
+                "action": payload,
+                "reward": data["reward"]["score"],
+                "done": data["done"],
+            }
+        )
+        st.sidebar.success("Step executed")
 
-        st.session_state.logs.append({
-            "action": payload,
-            "reward": data["reward"]["score"],
-            "done": data["done"]
-        })
-
-        st.sidebar.success("Step Executed")
-    else:
-        st.error(response.text)
-
-# BASELINE
-if st.sidebar.button("🤖 Run Baseline Agent"):
+baseline_force_fallback = st.sidebar.checkbox("Force fallback baseline", value=False)
+if st.sidebar.button("Run Baseline Agent"):
     with st.spinner("Running baseline..."):
-        response = requests.get(f"{API_URL}/baseline")
+        query = "?force_fallback=true" if baseline_force_fallback else ""
+        data, error = _api_request("GET", f"{api_url}/baseline{query}")
 
-    if response.status_code == 200:
-        result = response.json()["result"]
-        st.sidebar.success(f"Avg Score: {result['average_score']}")
+    if error:
+        st.error(error)
     else:
-        st.error(response.text)
+        st.session_state.baseline_result = data["result"]
+        result = st.session_state.baseline_result
+        st.sidebar.success(
+            f"Avg Score: {result['average_score']} ({result['policy_mode']})"
+        )
 
-# MAIN UI
-if "obs" in st.session_state:
+if st.sidebar.button("Fetch Grader"):
+    data, error = _api_request("GET", f"{api_url}/grader")
+    if error:
+        st.error(error)
+    else:
+        st.session_state.grader_result = data
+        st.sidebar.success(f"Score: {data['score']}")
 
+if st.session_state.obs:
     obs = st.session_state.obs
+    tabs = st.tabs(["Data", "Errors", "Metrics", "Logs", "Baseline"])
 
-    tabs = st.tabs(["📊 Data", "⚠️ Errors", "📈 Metrics", "📜 Logs"])
-
-    # DATA TAB
     with tabs[0]:
-        col1, col2 = st.columns(2)
-
-        with col1:
+        left, right = st.columns(2)
+        with left:
             st.subheader("Dataset Preview")
-            df = pd.DataFrame(obs["dataset_preview"])
-            st.dataframe(df, use_container_width=True)
-
-        with col2:
+            st.dataframe(pd.DataFrame(obs["dataset_preview"]), width='stretch')
+        with right:
             st.subheader("Schema")
             st.json(obs["data_schema"])
 
-    # ERRORS TAB
     with tabs[1]:
         st.subheader("Detected Issues")
         if obs["visible_errors"]:
-            for err in obs["visible_errors"]:
-                st.warning(err)
+            for error in obs["visible_errors"]:
+                st.warning(error)
         else:
             st.success("No errors detected")
 
-    # METRICS TAB
     with tabs[2]:
-        col3, col4 = st.columns(2)
-
-        with col3:
+        col1, col2 = st.columns(2)
+        with col1:
             st.markdown('<div class="metric-card">', unsafe_allow_html=True)
             st.metric("Data Quality Score", round(obs["data_quality_score"], 4))
-            st.markdown('</div>', unsafe_allow_html=True)
-
-        with col4:
+            st.markdown("</div>", unsafe_allow_html=True)
+        with col2:
             st.markdown('<div class="metric-card">', unsafe_allow_html=True)
             st.metric("Step Count", obs["step_count"])
-            st.markdown('</div>', unsafe_allow_html=True)
+            st.markdown("</div>", unsafe_allow_html=True)
 
-    # LOGS TAB
+        if st.session_state.grader_result:
+            st.subheader("Grader")
+            st.json(st.session_state.grader_result)
+
     with tabs[3]:
         if st.session_state.logs:
             log_df = pd.DataFrame(st.session_state.logs)
-            st.dataframe(log_df, use_container_width=True)
-
+            st.dataframe(log_df, width='stretch')
             st.subheader("Reward Trend")
-            rewards = [log["reward"] for log in st.session_state.logs]
-            st.line_chart(rewards)
+            st.line_chart([log["reward"] for log in st.session_state.logs])
         else:
             st.info("No actions yet")
 
+    with tabs[4]:
+        if st.session_state.baseline_result:
+            st.subheader("Baseline Result")
+            st.json(st.session_state.baseline_result)
+        else:
+            st.info("Run the baseline agent to inspect the current baseline output.")
 else:
-    st.info("Initialize environment to begin")
+    st.info("Initialize the environment to begin.")

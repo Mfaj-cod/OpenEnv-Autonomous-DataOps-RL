@@ -121,6 +121,14 @@ Implemented endpoints:
 
 If API key/model call is unavailable, baseline automatically falls back to a deterministic policy so `/baseline` remains functional.
 
+Root inference script:
+- `inference.py`
+- required env contract for submission:
+  - `API_BASE_URL`
+  - `MODEL_NAME`
+  - `HF_TOKEN`
+- stdout emits validator-friendly `[START]`, `[STEP]`, and `[END]` lines.
+
 ## Reproducible baseline scores (fallback mode)
 
 Generated with:
@@ -139,7 +147,7 @@ Current scores:
 ### Local
 ```bash
 pip install -r requirements.txt
-uvicorn server:app --reload --host 0.0.0.0 --port 8000
+uvicorn server.app:app --reload --host 0.0.0.0 --port 8000
 ```
 
 ### Docker

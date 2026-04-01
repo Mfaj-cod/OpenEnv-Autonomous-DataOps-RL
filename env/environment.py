@@ -66,6 +66,13 @@ class DataOpsEnv:
             "hidden_remaining": len(self.hidden_errors),
         }
 
+    def close(self) -> None:
+        self.state_data = None
+        self.hidden_errors = []
+        self.revealed_errors = []
+        self.step_count = 0
+        self.done = False
+
     def reset(self, task_id: str = "missing_values_easy", data_path: str = None) -> Observation:
         task = get_task_data(task_id)
         self.current_task_id = task_id
