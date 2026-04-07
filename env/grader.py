@@ -5,6 +5,8 @@ import pandas as pd
 
 from env.tasks import DEFAULT_MAX_STEPS, get_task_data
 
+EPS = 1e-6  # ensures strict (0, 1)
+
 TASK_GRADER_WEIGHTS: Dict[str, Dict[str, float]] = {
     "missing_values_easy": {
         "completeness": 0.35,
@@ -33,7 +35,11 @@ TASK_GRADER_WEIGHTS: Dict[str, Dict[str, float]] = {
 
 
 def _clamp(score: float) -> float:
-    return float(max(0.0, min(score, 1.0)))
+    return float(max(EPS, min(score, 1.0 - EPS)))
+
+
+def _soft_bool(x: bool) -> float:
+    return 1.0 - EPS if x else EPS
 
 
 def _compute_schema_alignment(
@@ -41,16 +47,16 @@ def _compute_schema_alignment(
     expected_schema: Optional[Dict[str, str]] = None,
 ) -> float:
     if df.empty:
-        return 0.0
+        return EPS
 
     if not expected_schema:
-        return 1.0
+        return 1.0 - EPS
 
     column_scores = []
 
     for column, expected_type in expected_schema.items():
         if column not in df.columns:
-            column_scores.append(0.0)
+            column_scores.append(EPS)
             continue
 
         series = df[column]
@@ -58,7 +64,7 @@ def _compute_schema_alignment(
         non_empty = series[~series.isnull() & (string_values != "")]
 
         if non_empty.empty:
-            column_scores.append(1.0)
+            column_scores.append(1.0 - EPS)
             continue
 
         normalized_expected_type = expected_type.lower()
@@ -66,10 +72,10 @@ def _compute_schema_alignment(
             numeric = pd.to_numeric(non_empty, errors="coerce")
             column_scores.append(float(numeric.notnull().mean()))
         else:
-            column_scores.append(1.0)
+            column_scores.append(1.0 - EPS)
 
     if not column_scores:
-        return 1.0
+        return 1.0 - EPS
 
     return _clamp(float(np.mean(column_scores)))
 
@@ -80,21 +86,21 @@ def compute_quality_signals(
 ) -> Dict[str, float]:
     if not data:
         return {
-            "data_quality": 0.0,
-            "completeness": 0.0,
-            "uniqueness": 0.0,
-            "schema_alignment": 0.0,
-            "type_consistency": 0.0,
+            "data_quality": EPS,
+            "completeness": EPS,
+            "uniqueness": EPS,
+            "schema_alignment": EPS,
+            "type_consistency": EPS,
         }
 
     df = pd.DataFrame(data)
     if df.empty or df.size == 0:
         return {
-            "data_quality": 0.0,
-            "completeness": 0.0,
-            "uniqueness": 0.0,
-            "schema_alignment": 0.0,
-            "type_consistency": 0.0,
+            "data_quality": EPS,
+            "completeness": EPS,
+            "uniqueness": EPS,
+            "schema_alignment": EPS,
+            "type_consistency": EPS,
         }
 
     total_cells = max(int(df.size), 1)
@@ -146,7 +152,7 @@ def grade_report(env_state: Dict[str, Any], task_id: Optional[str] = None) -> Di
     total_hidden = int(env_state.get("total_hidden", task_hidden_count))
     hidden_resolved = int(env_state.get("hidden_resolved", 0))
     if total_hidden <= 0:
-        hidden_resolution = 1.0
+        hidden_resolution = 1.0 - EPS
     else:
         hidden_resolution = _clamp(hidden_resolved / float(total_hidden))
 
@@ -160,7 +166,7 @@ def grade_report(env_state: Dict[str, Any], task_id: Optional[str] = None) -> Di
         "uniqueness": signals["uniqueness"],
         "schema_alignment": signals["schema_alignment"],
         "type_consistency": signals["type_consistency"],
-        "pipeline_success": float(bool(env_state.get("pipeline_success", 0))),
+        "pipeline_success": _soft_bool(env_state.get("pipeline_success", 0)),
         "hidden_resolution": hidden_resolution,
         "efficiency": efficiency,
     }
@@ -174,9 +180,11 @@ def grade_report(env_state: Dict[str, Any], task_id: Optional[str] = None) -> Di
     for component, weight in weights.items():
         score += weight * components.get(component, 0.0)
 
+    score = _clamp(score)
+
     return {
         "task_id": resolved_task_id,
-        "score": _clamp(score),
+        "score": score,
         "components": {name: _clamp(value) for name, value in components.items()},
         "weights": weights,
     }
