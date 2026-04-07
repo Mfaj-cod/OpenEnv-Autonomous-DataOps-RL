@@ -34,7 +34,14 @@ TASK_GRADER_WEIGHTS: Dict[str, Dict[str, float]] = {
 }
 
 
+def _safe(score: float) -> float:
+    if score is None or np.isnan(score) or np.isinf(score):
+        return EPS
+    return score
+
+
 def _clamp(score: float) -> float:
+    score = _safe(score)
     return float(max(EPS, min(score, 1.0 - EPS)))
 
 
@@ -77,7 +84,7 @@ def _compute_schema_alignment(
     if not column_scores:
         return 1.0 - EPS
 
-    return _clamp(float(np.mean(column_scores)))
+    return _clamp(np.mean(column_scores))
 
 
 def compute_quality_signals(
@@ -178,14 +185,15 @@ def grade_report(env_state: Dict[str, Any], task_id: Optional[str] = None) -> Di
 
     score = 0.0
     for component, weight in weights.items():
-        score += weight * components.get(component, 0.0)
+        value = _safe(components.get(component, EPS))
+        score += weight * value
 
-    score = _clamp(score)
+    score = _clamp(_safe(score))
 
     return {
         "task_id": resolved_task_id,
         "score": score,
-        "components": {name: _clamp(value) for name, value in components.items()},
+        "components": {name: _clamp(_safe(value)) for name, value in components.items()},
         "weights": weights,
     }
 

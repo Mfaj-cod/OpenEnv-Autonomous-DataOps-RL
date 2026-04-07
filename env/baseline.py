@@ -178,7 +178,7 @@ def run_baseline(force_policy: Optional[str] = None) -> Dict[str, Any]:
         total_steps += obs.step_count
 
         task_results[task_id] = {
-            "final_score": round(final_score, 4),
+            "final_score": float(max(1e-6, min(final_score, 1 - 1e-6))),
             "steps_used": int(obs.step_count),
             "done": bool(env.done),
             "components": {

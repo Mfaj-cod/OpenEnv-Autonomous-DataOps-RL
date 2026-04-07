@@ -35,10 +35,10 @@ class DataOpsEnv:
         self.max_steps = DEFAULT_MAX_STEPS
         self.success_threshold = 0.95
         self.prev_grade_report: Dict[str, object] = {
-            "score": 0.0,
+            "score": 1e-6,
             "components": {
-                "data_quality": 0.0,
-                "hidden_resolution": 0.0,
+                "data_quality": 1e-6,
+                "hidden_resolution": 1e-6,
             },
         }
 
@@ -121,7 +121,7 @@ class DataOpsEnv:
             raise ValueError("Environment not initialized. Call reset() first.")
 
         if self.done:
-            reward = Reward(score=0.0, components={"episode_finished": 1.0})
+            reward = Reward(score=1e-6, components={"episode_finished": 1.0})
             return self._get_observation(), reward, True, {
                 "message": "Episode already finished. Call reset() for a new episode."
             }
@@ -168,7 +168,8 @@ class DataOpsEnv:
             + no_op_penalty
             - action_cost
         )
-        reward_value = float(np.clip(reward_value, -1.0, 1.0))
+        reward_value = (reward_value + 1.0) / 2.0  # normalize to [0,1]
+        reward_value = float(max(1e-6, min(reward_value, 1.0 - 1e-6)))
 
         self.prev_grade_report = current_report
 
@@ -251,7 +252,7 @@ class DataOpsEnv:
                 self.state_data.get("expected_schema", {}),
             )
         except Exception:
-            return 0.0
+            return 1e-6
 
     def _schema_alignment_score(self) -> float:
         signals = compute_quality_signals(
