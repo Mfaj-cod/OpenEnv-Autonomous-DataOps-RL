@@ -50,10 +50,11 @@ def log_step(step: int, action: str, reward: float, done: bool, error: Optional[
     )
 
 
-def log_end(success: bool, steps: int, rewards: List[float]) -> None:
+def log_end(success: bool, steps: int, score: float, rewards: List[float]) -> None:
     rewards_str = ",".join(f"{reward:.2f}" for reward in rewards)
     print(
-        f"[END] success={str(success).lower()} steps={steps} rewards={rewards_str}",
+        f"[END] success={str(success).lower()} steps={steps} "
+        f"score={score:.3f} rewards={rewards_str}",
         flush=True,
     )
 
@@ -134,6 +135,7 @@ def _run_task(task_id: str, client: Optional["OpenAIClient"]) -> None:
     rewards: List[float] = []
     history: List[str] = []
     steps_taken = 0
+    final_score = 1e-6
     success = False
 
     log_start(task=task_id, env_name=BENCHMARK, model_name=MODEL_NAME)
@@ -170,11 +172,12 @@ def _run_task(task_id: str, client: Optional["OpenAIClient"]) -> None:
                 break
 
         report = grade_report(env.state(), task_id=task_id)
-        success = bool(report["score"] >= float(task_meta["success_threshold"]))
+        final_score = float(max(1e-6, min(float(report["score"]), 1.0 - 1e-6)))
+        success = bool(final_score >= float(task_meta["success_threshold"]))
     finally:
         if hasattr(env, "close"):
             env.close()
-        log_end(success=success, steps=steps_taken, rewards=rewards)
+        log_end(success=success, steps=steps_taken, score=final_score, rewards=rewards)
 
 
 def main() -> None:
